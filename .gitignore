@@ -1,0 +1,327 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+myenv/
+.conda/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+test-results/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+# Allow the main notebook to be tracked if needed
+# RiskLexis_T5.ipynb
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Environments
+.env
+.env.*
+.venv
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# Hugging Face / Transformers cache and models
+hf_cache/
+.cache/
+models--*/
+transformers_cache/
+huggingface/
+
+# Model files (keep model configs but ignore large binary files)
+model/**/pytorch_model.bin
+model/**/model.safetensors
+model/**/*.safetensors
+model/**/flax_model.msgpack
+model/**/tf_model.h5
+model/**/training_args.bin
+model/**/optimizer.pt
+model/**/scheduler.pt
+model/**/trainer_state.json
+model/**/checkpoint-*/
+# Keep model configs and tokenizers (they're small)
+!model/**/config.json
+!model/**/tokenizer*.json
+!model/**/special_tokens_map.json
+!model/**/vocab.json
+!model/**/merges.txt
+!model/**/spiece.model
+!model/**/tokenizer_config.json
+!model/**/generation_config.json
+!model/**/README.md
+
+# Large model artifacts (anywhere)
+**/pytorch_model.bin
+**/model.safetensors
+**/*.safetensors
+**/flax_model.msgpack
+**/tf_model.h5
+**/training_args.bin
+**/optimizer.pt
+**/scheduler.pt
+**/trainer_state.json
+**/checkpoint-*/
+
+# Streamlit
+.streamlit/
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Temporary files
+*.tmp
+*.temp
+temp_*.pdf
+temp_*.docx
+temp_*.txt
+*.swp
+*.swo
+
+# Data files (uncomment if you don't want to track data)
+# data/
+# *.csv
+# *.json
+# *.parquet
+
+# Output files
+outputs/
+results/
+output/
+*.pdf
+!model/**/README.pdf
+
+# MLflow
+mlruns/
+.mlflow/
+
+# Weights & Biases
+wandb/
+
+# Tensorboard
+runs/
+logs/
+tensorboard/
+
+# Node.js (if using any JS dependencies)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# R (if any R scripts)
+.Rhistory
+.RData
+.Ruserdata
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Miscellaneous
+*.orig
+*.rej
+*.patch
+*.diff
+*.xlsx
+*.xls
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Certificate files
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# API keys and secrets (keep patterns)
+*.key
+*.secret
+secrets/
+credentials/
+
+# Google API credentials
+client_secret*.json
+service_account*.json
+credentials.json
+
+# Gemini API key
+gemini_api_key.txt
+*.api_key
