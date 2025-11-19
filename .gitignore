@@ -128,27 +128,36 @@ models--*/
 transformers_cache/
 huggingface/
 
+# Model directory (ignore entire directory to prevent uploading large model files)
+model/
+
 # Model files (keep model configs but ignore large binary files)
-model/**/pytorch_model.bin
-model/**/model.safetensors
-model/**/*.safetensors
-model/**/flax_model.msgpack
-model/**/tf_model.h5
-model/**/training_args.bin
-model/**/optimizer.pt
-model/**/scheduler.pt
-model/**/trainer_state.json
-model/**/checkpoint-*/
-# Keep model configs and tokenizers (they're small)
-!model/**/config.json
-!model/**/tokenizer*.json
-!model/**/special_tokens_map.json
-!model/**/vocab.json
-!model/**/merges.txt
-!model/**/spiece.model
-!model/**/tokenizer_config.json
-!model/**/generation_config.json
-!model/**/README.md
+# Note: If you need to track specific model configs, uncomment the lines below
+# and remove model/ above, then track files explicitly
+# If you want selective tracking instead of ignoring the entire model/ directory, use these patterns:
+# model/**/pytorch_model.bin
+# model/**/model.safetensors
+# model/**/*.safetensors
+# model/**/flax_model.msgpack
+# model/**/tf_model.h5
+# model/**/training_args.bin
+# model/**/optimizer.pt
+# model/**/scheduler.pt
+# model/**/trainer_state.json
+# model/**/checkpoint-*/
+# model/**/predictions_*.json
+# model/**/nbest_predictions_*.json
+# model/**/null_odds_*.json
+# Keep model configs and tokenizers (they're small) - only if model/ is not ignored
+# !model/**/config.json
+# !model/**/tokenizer*.json
+# !model/**/special_tokens_map.json
+# !model/**/vocab.json
+# !model/**/merges.txt
+# !model/**/spiece.model
+# !model/**/tokenizer_config.json
+# !model/**/generation_config.json
+# !model/**/README.md
 
 # Large model artifacts (anywhere)
 **/pytorch_model.bin
@@ -228,7 +237,6 @@ outputs/
 results/
 output/
 *.pdf
-!model/**/README.pdf
 
 # MLflow
 mlruns/
