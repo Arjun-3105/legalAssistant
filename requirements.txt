@@ -1,0 +1,16 @@
+streamlit
+transformers
+PyPDF2
+python-docx
+fpdf
+torch
+google-generativeai
+pdfplumber
+rouge-score
+nltk
+scikit-learn
+tiktoken
+sentencepiece
+chromadb
+pandas
+python-dotenv
