@@ -7,6 +7,7 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from vectorStore import DocumentStore
+from api_manager import render_api_sidebar
 
 # ─── Initialize ──────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ store = load_store()
 # ─── Streamlit UI ────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="Legal AI — Document Library", layout="wide")
+render_api_sidebar()
 st.title("📚 Document Library")
 st.write("Manage your legal document corpus. Ingest PDFs individually or in batch, view indexed documents, and manage the vector store.")
 

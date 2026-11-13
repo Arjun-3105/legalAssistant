@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from vectorStore import DocumentStore
 from agent import LegalAgent
 from evaluation import evaluate_single
+from api_manager import render_api_sidebar
 
 @st.cache_resource
 def load_store():
@@ -29,6 +30,7 @@ agent = load_agent()
 # ─── Streamlit UI ────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="Legal AI — Analytics", layout="wide")
+render_api_sidebar()
 st.title("📊 Analytics Dashboard")
 st.write("Corpus insights, system metrics, and RAG evaluation benchmarks.")
 

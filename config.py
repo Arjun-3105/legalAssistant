@@ -69,4 +69,5 @@ CLAUSE_CATEGORIES = [
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # ─── API Keys ────────────────────────────────────────────────────────────────
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+from api_manager import get_active_api_key
+GEMINI_API_KEY, _ = get_active_api_key()

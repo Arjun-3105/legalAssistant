@@ -17,6 +17,7 @@ from fpdf import FPDF
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from vectorStore import DocumentStore
+from api_manager import render_api_sidebar
 
 @st.cache_resource
 def load_store():
@@ -100,6 +101,7 @@ def extract_clauses_from_text(text: str) -> list[str]:
 # ─── Streamlit UI ────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="Legal AI — Clause Classification", layout="wide")
+render_api_sidebar()
 st.title("🏷️ Clause Classification")
 st.write("Classify legal clauses into **42 categories** using a T5 model trained on the CUAD dataset (88.1% accuracy). Extract and categorize every clause in your documents.")
 

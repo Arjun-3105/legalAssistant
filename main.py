@@ -1,9 +1,13 @@
 import streamlit as st
+from api_manager import render_api_sidebar
 
 st.set_page_config(
     page_title="RoBERTa Legal AI System",
     layout="wide"
 )
+
+# Render API credentials manager in sidebar
+render_api_sidebar()
 
 # ------------------------------
 # HEADER

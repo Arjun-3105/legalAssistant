@@ -12,6 +12,7 @@ import pdfplumber
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from vectorStore import DocumentStore
+from api_manager import render_api_sidebar
 
 @st.cache_resource
 def load_store():
@@ -36,6 +37,7 @@ def load_model():
 model, tokenizer = load_model()
 
 # Streamlit App UI
+render_api_sidebar()
 st.title("Enhanced Contract Risk Assessment Tool")
 st.write("Analyze contract clauses for risks and get correction suggestions.")
 

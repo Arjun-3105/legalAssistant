@@ -1,13 +1,16 @@
 """
 vectorStore.py — ChromaDB-backed persistent document store for legal document corpus.
 
-Provides document ingestion (PDF), chunking, RoBERTa-based embedding, and semantic retrieval
-across 300+ legal documents.
+Provides document ingestion (PDF), chunking, RoBERTa-based embedding with masked mean pooling,
+and hybrid (semantic + lexical) retrieval across 300+ legal documents.
 """
 
 import os
-from dotenv import load_dotenv
-load_dotenv()  # Load .env file before any os.getenv() calls
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file before any os.getenv() calls
+except ImportError:
+    pass
 import re
 import hashlib
 import torch
@@ -37,15 +40,31 @@ except Exception as e:
 
 
 def get_roberta_embedding(text: str) -> list[float]:
-    """Generate a dense embedding for a text string using RoBERTa."""
+    """
+    Generate a dense embedding for a text string using RoBERTa.
+    Uses proper attention-masked mean pooling and L2 normalization
+    to prevent padding corruption and vector anisotropy.
+    """
+    if not text or not text.strip() or roberta_model is None or roberta_tokenizer is None:
+        return [0.0] * 768
+
     inputs = roberta_tokenizer(
         text, return_tensors="pt", padding=True, truncation=True, max_length=512
     )
     with torch.no_grad():
         outputs = roberta_model(**inputs)
-    # Mean pooling over token embeddings
-    embedding = torch.mean(outputs.last_hidden_state, dim=1).squeeze().numpy()
-    return embedding.tolist()
+
+    # Attention-mask aware mean pooling
+    attention_mask = inputs["attention_mask"].unsqueeze(-1)
+    token_embeddings = outputs.last_hidden_state
+    input_mask_expanded = attention_mask.expand(token_embeddings.size()).float()
+    sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
+    sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+    mean_pooled = sum_embeddings / sum_mask
+
+    # L2 normalize for robust cosine similarity
+    normalized = torch.nn.functional.normalize(mean_pooled, p=2, dim=1)
+    return normalized.squeeze().cpu().numpy().tolist()
 
 
 # ─── Text Chunking ────────────────────────────────────────────────────────────
@@ -53,13 +72,29 @@ def get_roberta_embedding(text: str) -> list[float]:
 def chunk_text(text: str, chunk_size: int = 200, overlap: int = 50) -> list[dict]:
     """
     Split text into overlapping word-level chunks with sentence awareness.
+    Safely subdivides over-length legal sentences so no text is truncated.
     Returns list of {text, word_count} dicts.
     """
     text = re.sub(r'\s+', ' ', text).strip()
     if not text:
         return []
 
-    sentences = sent_tokenize(text)
+    raw_sentences = sent_tokenize(text)
+    
+    # Subdivide extremely long sentences (common in legal contracts with multiple sub-clauses)
+    sentences = []
+    for s in raw_sentences:
+        s_words = s.split()
+        if len(s_words) > chunk_size:
+            # Split on semicolons or clause markers (a), (b), (i), (ii) if present
+            subparts = re.split(r'(?=[;\n]|\s\([a-z0-9]+\)\s)', s)
+            for part in subparts:
+                part = part.strip()
+                if part:
+                    sentences.append(part)
+        else:
+            sentences.append(s)
+
     chunks = []
     current_chunk_words = []
     current_word_count = 0
@@ -88,12 +123,68 @@ def chunk_text(text: str, chunk_size: int = 200, overlap: int = 50) -> list[dict
 def extract_pdf_text(pdf_path: str) -> list[dict]:
     """Extract text from PDF, returning list of {page, text} dicts."""
     pages = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for i, page in enumerate(pdf.pages):
-            text = page.extract_text()
-            if text and text.strip():
-                pages.append({"page": i + 1, "text": text.strip()})
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for i, page in enumerate(pdf.pages):
+                text = page.extract_text()
+                if text and text.strip():
+                    pages.append({"page": i + 1, "text": text.strip()})
+    except Exception as e:
+        print(f"[VectorStore] Error reading PDF {pdf_path}: {e}")
     return pages
+
+
+# ─── Lexical & Hybrid Scoring Helpers ─────────────────────────────────────────
+
+STOPWORDS = {
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are",
+    "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by",
+    "can", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "for", "from",
+    "further", "had", "has", "have", "having", "he", "her", "here", "hers", "herself", "him", "himself",
+    "his", "how", "i", "if", "in", "into", "is", "it", "its", "itself", "me", "more", "most", "my",
+    "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our",
+    "ours", "ourselves", "out", "over", "own", "same", "she", "should", "so", "some", "such", "than",
+    "that", "the", "their", "theirs", "them", "themselves", "then", "there", "these", "they", "this",
+    "those", "through", "to", "too", "under", "until", "up", "very", "was", "we", "were", "what",
+    "when", "where", "which", "while", "who", "whom", "why", "with", "would", "you", "your", "yours"
+}
+
+
+def compute_lexical_score(query: str, text: str) -> float:
+    """
+    Compute keyword relevance between query and chunk.
+    Gives heavy weight to exact term matches and key phrases.
+    """
+    if not query or not text:
+        return 0.0
+
+    q_tokens = [w.lower() for w in re.findall(r'\b[a-zA-Z0-9_\-]{3,}\b', query) if w.lower() not in STOPWORDS]
+    if not q_tokens:
+        return 0.5  # Neutral score if query consists solely of stopwords
+
+    text_lower = text.lower()
+    
+    # 1. Term hit ratio
+    matches = sum(1 for tok in q_tokens if tok in text_lower)
+    term_ratio = matches / len(q_tokens)
+    
+    # 2. Phrase matching bonus
+    phrase_bonus = 0.0
+    if len(q_tokens) >= 2:
+        for i in range(len(q_tokens) - 1):
+            bigram = f"{q_tokens[i]} {q_tokens[i+1]}"
+            if bigram in text_lower:
+                phrase_bonus += 0.25
+                
+    # 3. Frequency boost
+    freq_boost = 0.0
+    for tok in q_tokens:
+        count = text_lower.count(tok)
+        if count > 1:
+            freq_boost += 0.05
+
+    final_score = min(1.0, (term_ratio * 0.7) + phrase_bonus + freq_boost)
+    return final_score
 
 
 # ─── DocumentStore ────────────────────────────────────────────────────────────
@@ -102,7 +193,7 @@ class DocumentStore:
     """
     Persistent vector store for legal documents using ChromaDB.
     Supports ingestion of individual PDFs or entire directories,
-    semantic retrieval, and corpus management.
+    hybrid semantic + lexical retrieval, and corpus management.
     """
 
     def __init__(self, persist_dir: str = "./chroma_legal_store"):
@@ -132,7 +223,12 @@ class DocumentStore:
         existing = self.collection.get(where={"source_file": filename})
         if existing and existing["ids"]:
             print(f"[VectorStore] ⚠️  {filename} already ingested ({len(existing['ids'])} chunks). Skipping.")
-            return {"filename": filename, "pages": 0, "chunks_added": 0, "status": "already_exists"}
+            return {
+                "filename": filename,
+                "pages": 0,
+                "chunks_added": len(existing['ids']),
+                "status": "already_exists"
+            }
 
         pages = extract_pdf_text(pdf_path)
         if not pages:
@@ -161,7 +257,6 @@ class DocumentStore:
 
         # Batch upsert to ChromaDB
         if all_ids:
-            # ChromaDB has batch size limits, so batch in groups of 100
             batch_size = 100
             for i in range(0, len(all_ids), batch_size):
                 self.collection.add(
@@ -195,43 +290,66 @@ class DocumentStore:
 
     def query(self, query_text: str, top_k: int = 10, filter_file: str = None) -> list[dict]:
         """
-        Semantic search across the entire corpus.
+        Hybrid (Dense Semantic + Lexical Keyword) search across the corpus.
         Returns list of {text, source_file, page, score, chunk_index} dicts.
         """
-        query_embedding = get_roberta_embedding(query_text)
+        total_in_db = self.collection.count()
+        if total_in_db == 0:
+            return []
 
+        query_embedding = get_roberta_embedding(query_text)
         where_filter = {"source_file": filter_file} if filter_file else None
 
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            where=where_filter,
-            include=["documents", "metadatas", "distances"]
-        )
+        # Fetch more candidates for hybrid reranking
+        fetch_k = min(total_in_db, max(top_k * 3, 20))
 
-        retrieved = []
+        try:
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=fetch_k,
+                where=where_filter,
+                include=["documents", "metadatas", "distances"]
+            )
+        except Exception as e:
+            print(f"[VectorStore] Query error: {e}")
+            return []
+
+        candidates = []
         if results and results["ids"] and results["ids"][0]:
             for i in range(len(results["ids"][0])):
-                retrieved.append({
-                    "text": results["documents"][0][i],
+                doc_text = results["documents"][0][i]
+                distance = results["distances"][0][i]
+                # Cosine distance to similarity (0 to 1)
+                semantic_sim = max(0.0, min(1.0, 1.0 - (distance / 2.0)))
+                lexical_sim = compute_lexical_score(query_text, doc_text)
+
+                # Combined Hybrid Score: 55% dense semantic + 45% lexical
+                hybrid_score = round((0.55 * semantic_sim) + (0.45 * lexical_sim), 4)
+
+                candidates.append({
+                    "text": doc_text,
                     "source_file": results["metadatas"][0][i]["source_file"],
                     "page": results["metadatas"][0][i]["page"],
                     "chunk_index": results["metadatas"][0][i]["chunk_index"],
-                    "score": 1 - results["distances"][0][i]  # ChromaDB returns distance, convert to similarity
+                    "score": hybrid_score,
+                    "semantic_score": round(semantic_sim, 4),
+                    "lexical_score": round(lexical_sim, 4)
                 })
 
-        return retrieved
+        # Rerank by hybrid score
+        candidates.sort(key=lambda c: c["score"], reverse=True)
+        return candidates[:top_k]
 
     def get_stats(self) -> dict:
         """Return corpus statistics."""
         total_chunks = self.collection.count()
 
-        # Get unique documents
         if total_chunks > 0:
             all_metadata = self.collection.get(include=["metadatas"])
             unique_files = set()
             for meta in all_metadata["metadatas"]:
-                unique_files.add(meta["source_file"])
+                if meta and "source_file" in meta:
+                    unique_files.add(meta["source_file"])
             return {
                 "total_documents": len(unique_files),
                 "total_chunks": total_chunks,
